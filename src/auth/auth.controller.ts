@@ -5,8 +5,10 @@ import { SignInDto } from './dto/sign-in.dto';
 import { SignUpDto } from './dto/sign-up.dto';
 import { User } from 'src/user/entities/user.entity';
 import { CurrentUser } from 'src/guards/user.decorator';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
 @Controller('auth')
+@UseGuards(ThrottlerGuard)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -24,6 +26,7 @@ export class AuthController {
     };
   }
 
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('login')
   async login(@Body() signInDto: SignInDto) {
     return this.authService.signIn(signInDto);
