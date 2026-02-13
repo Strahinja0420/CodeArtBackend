@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider     = "prisma-client-js"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- ENUMS ---
+
+enum Language {
+  SL
+  EN
+  DE
+  IT
+  SR
+}
+
+enum Device {
+  MOBILE
+  TABLET
+  PC
+}
+
+// --- MODELS ---
+
+model User {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  email           String   @unique
+  passwordHash    String
+  avatarURL       String?
+  institutionName String?
+  dark            Boolean? @default(false)
+
+  // Relationships
+  experiences Experience[]
+  qrStyle     QRStyle?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Experience {
+  id              String  @id @default(uuid())
+  title           String
+  description     String  @db.Text
+  scanCount       Int     @default(0)
+  audioLocation   String?
+  storageLocation String
+
+  // Metadata
+  material     String?
+  period       String?
+  author       String?
+  yearCreated  Int?
+  thumbnailURL String?
+  category     String?
+
+  // Relationships
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visits       Visit[]
+  feedbacks    Feedback[]
+  translations Translation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Visit {
+  id           Int      @id @default(autoincrement())
+  viewDuration Int?
+  timestamp    DateTime @default(now())
+  hotspotData  Json?
+  language     Language
+  deviceType   Device
+
+  // Relationships
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+}
+
+model QRStyle {
+  id      Int     @id @default(autoincrement())
+  name    String
+  config  Json
+  logoURL String?
+
+  // Relationships
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+model Feedback {
+  id      Int     @id @default(autoincrement())
+  rating  Int
+  comment String? @db.Text
+
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model Translation {
+  id           Int      @id @default(autoincrement())
+  languageCode Language
+  title        String
+  description  String   @db.Text
+
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+}
