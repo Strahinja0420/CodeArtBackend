@@ -30,9 +30,3 @@ export class User {
   @Exclude()
   passwordHash?: string | null;
 }
-
-const userWithRelations = Prisma.validator<Prisma.UserDefaultArgs>()({
-  include: { experiences: true, qrStyle: true },
-});
-
-export type UserWithRelations = Prisma.UserGetPayload<typeof userWithRelations>;

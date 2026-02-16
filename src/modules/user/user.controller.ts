@@ -21,7 +21,7 @@ import { User } from './entities/user.entity';
 import { CurrentUser } from 'src/decorators/user.decorator';
 import { JwtAuthGuard } from 'src/guards/auth.guard';
 import { ThrottlerGuard } from '@nestjs/throttler';
-import type { UserWithRelations } from './entities/user.entity';
+import { UserWithRelations } from './entities/user-with-relations.entity';
 
 @ApiTags('user')
 @ApiBearerAuth()
@@ -43,7 +43,7 @@ export class UserController {
   }
 
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiOkResponse({ type: User })
+  @ApiOkResponse({ type: UserWithRelations })
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async findMe(@CurrentUser() user: User): Promise<UserWithRelations> {

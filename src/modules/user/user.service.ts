@@ -4,6 +4,7 @@ import { PrismaService } from 'prisma/prisma.service';
 
 import { SupabaseService } from 'src/supabase/supabase.service';
 import { User } from './entities/user.entity';
+import { UserWithRelations } from './entities/user-with-relations.entity';
 
 @Injectable()
 export class UserService {
@@ -12,7 +13,7 @@ export class UserService {
     private readonly supabaseService: SupabaseService,
   ) {}
 
-  async findAll() {
+  async findAll(): Promise<UserWithRelations[]> {
     return await this.prismaService.user.findMany({
       include: {
         experiences: true,
@@ -21,7 +22,7 @@ export class UserService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<UserWithRelations | null> {
     return await this.prismaService.user.findUnique({
       where: { id },
       include: {
@@ -31,7 +32,11 @@ export class UserService {
     });
   }
 
-  async update(id: string, data: UpdateUserDto, user: User) {
+  async update(
+    id: string,
+    data: UpdateUserDto,
+    user: User,
+  ): Promise<UserWithRelations> {
     const { qrStyle, ...userData } = data;
 
     if (userData.name || userData.avatarURL) {
