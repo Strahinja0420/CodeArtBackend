@@ -2,9 +2,9 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
-import { AuthModule } from './auth/auth.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { SupabaseModule } from './supabase/supabase.module';
-import { UserModule } from './user/user.module';
+import { UserModule } from './modules/user/user.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
