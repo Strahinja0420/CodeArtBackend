@@ -8,12 +8,16 @@ import {
 } from 'class-validator';
 
 class UpdateQrStyleDto {
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description:
+      'Dynamic configuration for the QR code appearance (colors, shapes, etc.)',
+    example: { eyeColor: '#ff0000', bodyType: 'dots' },
+  })
   @IsOptional()
   @IsObject()
-  config?: any;
+  config?: Record<string, any>;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: 'https://example.com/logo.png' })
   @IsOptional()
   @IsString()
   @IsUrl()

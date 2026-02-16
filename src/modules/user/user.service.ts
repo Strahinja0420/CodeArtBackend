@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'prisma/prisma.service';
 
 import { SupabaseService } from 'src/supabase/supabase.service';
+import { User } from './entities/user.entity';
 
 @Injectable()
 export class UserService {
@@ -30,7 +31,7 @@ export class UserService {
     });
   }
 
-  async update(id: string, data: UpdateUserDto) {
+  async update(id: string, data: UpdateUserDto, user: User) {
     const { qrStyle, ...userData } = data;
 
     if (userData.name || userData.avatarURL) {
@@ -43,7 +44,9 @@ export class UserService {
         });
 
       if (error) {
-        throw new Error(`Failed to update user in Supabase: ${error.message}`);
+        throw new InternalServerErrorException(
+          `Failed to update user in Supabase: ${error.message}`,
+        );
       }
     }
 
@@ -56,7 +59,7 @@ export class UserService {
               upsert: {
                 create: {
                   config: qrStyle.config || {},
-                  name: `${userData.name ?? 'User'}'s Style`,
+                  name: `${userData.name ?? user.name}'s Style`,
                   logoURL: qrStyle.logoURL,
                 },
                 update: qrStyle,
