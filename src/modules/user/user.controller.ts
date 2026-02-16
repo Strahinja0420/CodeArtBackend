@@ -1,13 +1,13 @@
 import {
   Controller,
   Get,
-  Post,
   Body,
   Patch,
   Param,
   Delete,
   NotFoundException,
   UseGuards,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -17,12 +17,15 @@ import {
 } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { User, UserWithRelations } from './entities/user.entity';
+import { User } from './entities/user.entity';
 import { CurrentUser } from 'src/decorators/user.decorator';
 import { JwtAuthGuard } from 'src/guards/auth.guard';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import type { UserWithRelations } from './entities/user.entity';
 
 @ApiTags('user')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, ThrottlerGuard)
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -67,8 +70,17 @@ export class UserController {
 
   @ApiOperation({ summary: 'Update an user' })
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() data: UpdateUserDto) {
-    const updatedUser = await this.userService.update(id, data);
+  async update(
+    @Param('id') id: string,
+    @Body() data: UpdateUserDto,
+    @CurrentUser() user: User,
+  ) {
+    if (id !== user.id) {
+      throw new UnauthorizedException(
+        'You are not permitted to change other users profiles.',
+      );
+    }
+    const updatedUser = await this.userService.update(id, data, user);
 
     return {
       message: 'User updated successfully',
@@ -78,7 +90,12 @@ export class UserController {
 
   @ApiOperation({ summary: 'Delete an user' })
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string, @CurrentUser() user: User) {
+    if (id !== user.id) {
+      throw new UnauthorizedException(
+        'You are not permitted to change other users profiles.',
+      );
+    }
     const deletedUser = await this.userService.remove(id);
 
     return {
