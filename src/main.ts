@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { PrismaExceptionFilter } from 'prisma/filters/prisma-exeptions.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ResponseInterceptor } from './interceptors/response.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -24,7 +25,10 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, documentFactory);
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector))); //Prevents backend from sending data that i didnt explicitly tell it to send to the frontend, therefore theres a smaller chance of leaking passwordHash (which i dont need i guess because of supabase) from the database
+  app.useGlobalInterceptors(
+    new ClassSerializerInterceptor(app.get(Reflector)),
+    new ResponseInterceptor(),
+  ); //(ClassSerializerInterceptor)Prevents backend from sending data that i didnt explicitly tell it to send to the frontend, therefore theres a smaller chance of leaking passwordHash (which i dont need i guess because of supabase) from the database
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
