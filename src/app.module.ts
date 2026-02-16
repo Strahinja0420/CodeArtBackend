@@ -6,6 +6,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { UserModule } from './modules/user/user.module';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ExperienceModule } from './experience/experience.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
         },
       ],
     }),
+    ExperienceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
