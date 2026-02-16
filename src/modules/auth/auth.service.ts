@@ -75,7 +75,7 @@ export class AuthService {
     });
     return {
       user: prismaUser,
-      access_token: data.session.access_token,
+      access_token: data.session?.access_token,
     };
   }
 }

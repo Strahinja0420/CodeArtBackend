@@ -7,7 +7,6 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable shutdown hooks
   app.enableShutdownHooks();
 
   //PRISMA FILTER
@@ -25,7 +24,7 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, documentFactory);
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector))); //Prevents backend from sending data that i didnt explicitly tell it to send to the frontend, therefore theres a smaller chance of leaking passwordHash (which i dont need i guess because of supabase) from the database
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

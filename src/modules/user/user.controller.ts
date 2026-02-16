@@ -6,22 +6,38 @@ import {
   Patch,
   Param,
   Delete,
+  NotFoundException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UserWithRelations } from './entities/user.entity';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  findAll() {
-    return this.userService.findAll();
+  async findAll(): Promise<UserWithRelations[]> {
+    const users = await this.userService.findAll();
+
+    if (!users) {
+      throw new NotFoundException('There are no users in the database');
+    }
+
+    return users;
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
+  async findOne(@Param('id') id: string): Promise<UserWithRelations> {
+    const user = await this.userService.findOne(id);
+
+    if (!user) {
+      throw new NotFoundException(
+        `The user with id: ${id} has not been found.`,
+      );
+    }
+
+    return user;
   }
 
   @Patch(':id')
