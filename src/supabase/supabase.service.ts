@@ -31,11 +31,11 @@ export class SupabaseService {
     return this.supabaseAdmin;
   }
 
-  async uploadFile(avatar: Express.Multer.File, bucket: string, path: string) {
+  async uploadFile(file: Express.Multer.File, bucket: string, path: string) {
     const { data, error } = await this.supabaseClient.storage
       .from(bucket)
-      .upload(path, avatar.buffer, {
-        contentType: avatar.mimetype,
+      .upload(path, file.buffer, {
+        contentType: file.mimetype,
         upsert: true,
       });
 
