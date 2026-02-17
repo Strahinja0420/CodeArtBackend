@@ -19,6 +19,8 @@ import { User } from 'src/modules/user/entities/user.entity';
 import { Experience } from './entities/experience.entity';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
@@ -28,6 +30,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from 'src/guards/auth.guard';
 import { Public } from 'src/decorators/public.decorator';
 import { SupabaseService } from 'src/supabase/supabase.service';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('experience')
 @ApiBearerAuth()
@@ -46,7 +49,7 @@ export class ExperienceController {
     const newExperience = await this.experienceService.create(data, user.id);
 
     return {
-      message: 'Experience succesfully created',
+      message: 'Experience successfully created',
       data: newExperience,
     };
   }
@@ -82,7 +85,7 @@ export class ExperienceController {
     const specificExperience = await this.experienceService.findOne(id);
 
     return {
-      message: `Succesfully fetched experience with id ${id}`,
+      message: `Successfully fetched experience with id ${id}`,
       data: specificExperience,
     };
   }
@@ -101,7 +104,7 @@ export class ExperienceController {
     );
 
     return {
-      message: `Experience with the id:${id} succesfully updated`,
+      message: `Experience with the id:${id} successfully updated`,
       data: updatedExperience,
     };
   }
@@ -112,8 +115,56 @@ export class ExperienceController {
     const deletedExperience = await this.experienceService.remove(id, user);
 
     return {
-      message: `Experience with the id:${id} succesfully deleted`,
+      message: `Experience with the id:${id} successfully deleted`,
       data: deletedExperience,
+    };
+  }
+
+  @ApiOperation({ summary: 'Upload a thumbnail for an experience' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  @Post(':id/thumbnail')
+  async uploadThumbnail(
+    @CurrentUser() user: User,
+    @Param('id') experienceId: string,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: '.(jpg|jpeg|png)$',
+        })
+        .addMaxSizeValidator({
+          maxSize: 2 * 1024 * 1024,
+        })
+        .build({
+          fileIsRequired: true,
+        }),
+    )
+    thumbnail: Express.Multer.File,
+  ) {
+    const path = `${experienceId}/thumbnail-${Date.now()}`;
+    const thumbnailUrl = await this.supabaseService.uploadFile(
+      thumbnail,
+      'thumbnails',
+      path,
+    );
+
+    await this.experienceService.update(
+      experienceId,
+      { thumbnailURL: thumbnailUrl },
+      user,
+    );
+
+    return {
+      message: 'Thumbnail uploaded successfully',
+      url: thumbnailUrl,
     };
   }
 }
