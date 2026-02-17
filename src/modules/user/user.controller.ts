@@ -8,9 +8,15 @@ import {
   NotFoundException,
   UseGuards,
   UnauthorizedException,
+  UseInterceptors,
+  Post,
+  UploadedFile,
+  ParseFilePipeBuilder,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -22,13 +28,18 @@ import { CurrentUser } from 'src/decorators/user.decorator';
 import { JwtAuthGuard } from 'src/guards/auth.guard';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { UserWithRelations } from './entities/user-with-relations.entity';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { SupabaseService } from 'src/supabase/supabase.service';
 
 @ApiTags('user')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ThrottlerGuard)
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly supabaseService: SupabaseService,
+  ) {}
 
   @ApiOperation({ summary: 'Get all existing users' })
   @Get()
@@ -101,6 +112,49 @@ export class UserController {
     return {
       message: 'User deleted successfully',
       data: deletedUser,
+    };
+  }
+
+  @ApiOperation({ summary: 'Upload avatar to profile' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  @Post('avatar')
+  async uploadAvatar(
+    @CurrentUser() user: User,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: '.(jpg|jpeg|png)$',
+        })
+        .addMaxSizeValidator({
+          maxSize: 2 * 1024 * 1024,
+        })
+        .build({
+          fileIsRequired: true,
+        }),
+    )
+    avatar: Express.Multer.File,
+  ) {
+    const path = `${user.id}/avatar-${Date.now()}`;
+    const avatarUrl = await this.supabaseService.uploadFile(
+      avatar,
+      'avatars',
+      path,
+    );
+
+    await this.userService.update(user.id, { avatarURL: avatarUrl }, user);
+
+    return {
+      message: 'Avatar uploaded successfully',
+      url: avatarUrl,
     };
   }
 }
