@@ -30,4 +30,23 @@ export class SupabaseService {
   get admin(): SupabaseClient {
     return this.supabaseAdmin;
   }
+
+  async uploadFile(avatar: Express.Multer.File, bucket: string, path: string) {
+    const { data, error } = await this.supabaseClient.storage
+      .from(bucket)
+      .upload(path, avatar.buffer, {
+        contentType: avatar.mimetype,
+        upsert: true,
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    const {
+      data: { publicUrl },
+    } = this.client.storage.from(bucket).getPublicUrl(path);
+
+    return publicUrl;
+  }
 }

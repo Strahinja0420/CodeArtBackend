@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { CreateExperienceDto } from './dto/create-experience.dto';
 import { UpdateExperienceDto } from './dto/update-experience.dto';
 import { PrismaService } from 'prisma/prisma.service';
 import { Experience } from './entities/experience.entity';
+import { User } from 'src/modules/user/entities/user.entity';
 
 @Injectable()
 export class ExperienceService {
@@ -49,20 +50,32 @@ export class ExperienceService {
     return specificExperience;
   }
 
-  async update(id: string, data: UpdateExperienceDto): Promise<Experience> {
-    const updatedExperience: Experience =
-      await this.prismaService.experience.update({
-        where: { id },
-        data: { ...data },
-      });
+  async update(
+    id: string,
+    data: UpdateExperienceDto,
+    user: User,
+  ): Promise<Experience> {
+    const experience = await this.findOne(id);
 
-    return updatedExperience;
+    if (experience.userId !== user.id) {
+      throw new ForbiddenException('You cannot change this experience.');
+    }
+
+    return await this.prismaService.experience.update({
+      where: { id },
+      data: { ...data },
+    });
   }
 
-  async remove(id: string): Promise<Experience> {
-    const deletedExperience: Experience =
-      await this.prismaService.experience.delete({ where: { id } });
+  async remove(id: string, user: User): Promise<Experience> {
+    const experience = await this.findOne(id);
 
-    return deletedExperience;
+    if (experience.userId !== user.id) {
+      throw new ForbiddenException('You cannot change this experience.');
+    }
+
+    return await this.prismaService.experience.delete({
+      where: { id },
+    });
   }
 }
