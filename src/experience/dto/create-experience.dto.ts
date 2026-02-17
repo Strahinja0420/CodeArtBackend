@@ -61,9 +61,4 @@ export class CreateExperienceDto {
   @IsString()
   @ApiPropertyOptional()
   category?: string;
-
-  @IsOptional()
-  @IsUrl()
-  @ApiPropertyOptional()
-  avatarURL?: string;
 }
