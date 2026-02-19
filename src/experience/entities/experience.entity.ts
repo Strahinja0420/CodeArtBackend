@@ -16,8 +16,8 @@ export class Experience {
   @ApiPropertyOptional({ example: 'https://storage.com/audio.mp3' })
   audioLocation?: string | null;
 
-  @ApiProperty({ example: 'https://storage.com/model.glb' })
-  storageLocation: string;
+  @ApiPropertyOptional({ example: 'https://storage.com/model.glb' })
+  storageLocation?: string | null;
 
   @ApiPropertyOptional({ example: 'Gold' })
   material?: string | null;

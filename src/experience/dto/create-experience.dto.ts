@@ -2,12 +2,14 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUrl,
   Min,
   MinLength,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateExperienceDto {
   @IsNotEmpty()
@@ -27,10 +29,9 @@ export class CreateExperienceDto {
   @ApiPropertyOptional()
   audioLocation?: string;
 
-  @IsUrl()
-  @IsNotEmpty()
+  @IsOptional()
   @ApiProperty()
-  storageLocation: string;
+  storageLocation?: string;
 
   @IsOptional()
   @IsString()
@@ -48,7 +49,8 @@ export class CreateExperienceDto {
   author?: string;
 
   @IsOptional()
-  @IsInt()
+  @Type(() => Number)
+  @IsNumber()
   @ApiPropertyOptional()
   yearCreated?: number;
 

@@ -9,8 +9,13 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  UploadedFiles,
   ParseFilePipeBuilder,
 } from '@nestjs/common';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express';
 import { ExperienceService } from './experience.service';
 import { CreateExperienceDto } from './dto/create-experience.dto';
 import { UpdateExperienceDto } from './dto/update-experience.dto';
@@ -30,7 +35,6 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from 'src/guards/auth.guard';
 import { Public } from 'src/decorators/public.decorator';
 import { SupabaseService } from 'src/supabase/supabase.service';
-import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('experience')
 @ApiBearerAuth()
@@ -44,9 +48,48 @@ export class ExperienceController {
 
   @ApiOperation({ summary: 'Create a new experience' })
   @ApiCreatedResponse({ type: Experience })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        description: { type: 'string' },
+        storageLocation: { type: 'string' },
+        material: { type: 'string' },
+        period: { type: 'string' },
+        author: { type: 'string' },
+        yearCreated: { type: 'integer' },
+        category: { type: 'string' },
+        thumbnail: { type: 'string', format: 'binary' },
+        audio: { type: 'string', format: 'binary' },
+        model: { type: 'string', format: 'binary' },
+      },
+    },
+  })
   @Post()
-  async create(@Body() data: CreateExperienceDto, @CurrentUser() user: User) {
-    const newExperience = await this.experienceService.create(data, user.id);
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'thumbnail', maxCount: 1 },
+      { name: 'audio', maxCount: 1 },
+      { name: 'model', maxCount: 1 },
+    ]),
+  )
+  async create(
+    @Body() data: CreateExperienceDto,
+    @CurrentUser() user: User,
+    @UploadedFiles()
+    files: {
+      thumbnail?: Express.Multer.File[];
+      audio?: Express.Multer.File[];
+      model?: Express.Multer.File[];
+    },
+  ) {
+    const newExperience = await this.experienceService.create(data, user.id, {
+      thumbnail: files.thumbnail?.[0],
+      audio: files.audio?.[0],
+      model: files.model?.[0],
+    });
 
     return {
       message: 'Experience successfully created',
@@ -60,7 +103,7 @@ export class ExperienceController {
     const experiences = await this.experienceService.findAll();
 
     return {
-      message: 'Succesfull experiences query.',
+      message: 'Successful experiences query.',
       data: experiences,
     };
   }
@@ -165,6 +208,102 @@ export class ExperienceController {
     return {
       message: 'Thumbnail uploaded successfully',
       url: thumbnailUrl,
+    };
+  }
+
+  @ApiOperation({ summary: 'Upload an audio file for an experience' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  @Post(':id/audio')
+  async uploadMp3(
+    @CurrentUser() user: User,
+    @Param('id') experienceId: string,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: 'audio/mpeg',
+        })
+        .addMaxSizeValidator({
+          maxSize: 20 * 1024 * 1024,
+        })
+        .build({
+          fileIsRequired: true,
+        }),
+    )
+    audio: Express.Multer.File,
+  ) {
+    const path = `${experienceId}/audio-${Date.now()}`;
+    const audioUrl = await this.supabaseService.uploadFile(
+      audio,
+      'audios',
+      path,
+    );
+
+    await this.experienceService.update(
+      experienceId,
+      { audioLocation: audioUrl },
+      user,
+    );
+
+    return {
+      message: 'Audio uploaded successfully',
+      url: audioUrl,
+    };
+  }
+
+  @ApiOperation({ summary: 'Upload a 3D model for an experience' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  @Post(':id/model')
+  async uploadModel(
+    @CurrentUser() user: User,
+    @Param('id') experienceId: string,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: /\.(glb|gltf)$/,
+        })
+        .addMaxSizeValidator({
+          maxSize: 50 * 1024 * 1024,
+        })
+        .build({
+          fileIsRequired: true,
+        }),
+    )
+    model: Express.Multer.File,
+  ) {
+    const path = `${experienceId}/model-${Date.now()}`;
+    const modelUrl = await this.supabaseService.uploadFile(
+      model,
+      'models',
+      path,
+    );
+
+    await this.experienceService.update(
+      experienceId,
+      { storageLocation: modelUrl },
+      user,
+    );
+
+    return {
+      message: '3D Model uploaded successfully',
+      url: modelUrl,
     };
   }
 }

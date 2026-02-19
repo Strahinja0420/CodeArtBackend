@@ -1,23 +1,77 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { CreateExperienceDto } from './dto/create-experience.dto';
 import { UpdateExperienceDto } from './dto/update-experience.dto';
 import { PrismaService } from 'prisma/prisma.service';
 import { Experience } from './entities/experience.entity';
 import { User } from 'src/modules/user/entities/user.entity';
+import { SupabaseService } from 'src/supabase/supabase.service';
 
 @Injectable()
 export class ExperienceService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly supabaseService: SupabaseService,
+  ) {}
 
-  async create(data: CreateExperienceDto, userId: string): Promise<Experience> {
-    const experience: Experience = await this.prismaService.experience.create({
+  async create(
+    data: CreateExperienceDto,
+    userId: string,
+    files?: {
+      thumbnail?: Express.Multer.File;
+      audio?: Express.Multer.File;
+      model?: Express.Multer.File;
+    },
+  ): Promise<Experience> {
+    const experienceData = { ...data };
+
+    // Handle files if they exist
+    if (files?.thumbnail || files?.audio || files?.model) {
+      const tempId = crypto.randomUUID();
+
+      if (files.thumbnail) {
+        const thumbPath = `${tempId}/thumbnail-${Date.now()}`;
+        experienceData.thumbnailURL = await this.supabaseService.uploadFile(
+          files.thumbnail,
+          'thumbnails',
+          thumbPath,
+        );
+      }
+
+      if (files.audio) {
+        const audioPath = `${tempId}/audio-${Date.now()}`;
+        experienceData.audioLocation = await this.supabaseService.uploadFile(
+          files.audio,
+          'audios',
+          audioPath,
+        );
+      }
+
+      if (files.model) {
+        const modelPath = `${tempId}/model-${Date.now()}`;
+        experienceData.storageLocation = await this.supabaseService.uploadFile(
+          files.model,
+          'models',
+          modelPath,
+        );
+      }
+
+      // Override the id with our pre-generated one so paths match
+      return await this.prismaService.experience.create({
+        data: {
+          id: tempId,
+          ...experienceData,
+          user: { connect: { id: userId } },
+        },
+      });
+    }
+
+    return await this.prismaService.experience.create({
       data: {
-        ...data,
+        ...experienceData,
         user: { connect: { id: userId } },
       },
     });
-
-    return experience;
   }
 
   async findMany(userId: string): Promise<Experience[]> {

@@ -54,7 +54,7 @@ model Experience {
   description     String  @db.Text
   scanCount       Int     @default(0)
   audioLocation   String?
-  storageLocation String
+  storageLocation String?
 
   // Metadata
   material     String?

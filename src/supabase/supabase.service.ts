@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
@@ -32,7 +32,7 @@ export class SupabaseService {
   }
 
   async uploadFile(file: Express.Multer.File, bucket: string, path: string) {
-    const { data, error } = await this.supabaseClient.storage
+    const { data, error } = await this.supabaseAdmin.storage
       .from(bucket)
       .upload(path, file.buffer, {
         contentType: file.mimetype,
@@ -40,7 +40,9 @@ export class SupabaseService {
       });
 
     if (error) {
-      throw error;
+      throw new InternalServerErrorException(
+        `Supabase Storage Error: ${error.message}`,
+      );
     }
 
     const {
