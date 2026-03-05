@@ -6,12 +6,14 @@ import { PrismaService } from 'prisma/prisma.service';
 import { Experience } from './entities/experience.entity';
 import { User } from 'src/modules/user/entities/user.entity';
 import { SupabaseService } from 'src/supabase/supabase.service';
+import { QrServiceService } from 'src/qr-service/qr-service.service';
 
 @Injectable()
 export class ExperienceService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly supabaseService: SupabaseService,
+    private readonly qrServiceService: QrServiceService,
   ) {}
 
   async create(
@@ -24,11 +26,10 @@ export class ExperienceService {
     },
   ): Promise<Experience> {
     const experienceData = { ...data };
+    const tempId = crypto.randomUUID();
 
     // Handle files if they exist
     if (files?.thumbnail || files?.audio || files?.model) {
-      const tempId = crypto.randomUUID();
-
       if (files.thumbnail) {
         const thumbPath = `${tempId}/thumbnail-${Date.now()}`;
         experienceData.thumbnailURL = await this.supabaseService.uploadFile(
@@ -55,23 +56,39 @@ export class ExperienceService {
           modelPath,
         );
       }
-
-      // Override the id with our pre-generated one so paths match
-      return await this.prismaService.experience.create({
-        data: {
-          id: tempId,
-          ...experienceData,
-          user: { connect: { id: userId } },
-        },
-      });
     }
 
-    return await this.prismaService.experience.create({
+    // Create the experience first
+    const experience = await this.prismaService.experience.create({
       data: {
+        id: tempId,
         ...experienceData,
         user: { connect: { id: userId } },
       },
     });
+
+    // Generate QR Code
+    const qrCodeUrl = await this.generateQRCode(experience.id, userId);
+
+    // Update experience with QR Code URL
+    return await this.prismaService.experience.update({
+      where: { id: experience.id },
+      data: { QRcodeUrl: qrCodeUrl },
+    });
+  }
+
+  async generateQRCode(experienceId: string, userId: string): Promise<string> {
+    const userWithStyle = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: { qrStyle: true },
+    });
+
+    const qrCodeUrl = await this.qrServiceService.generateQRCode(
+      experienceId,
+      (userWithStyle?.qrStyle?.config as any) || {},
+    );
+
+    return qrCodeUrl;
   }
 
   async findMany(userId: string): Promise<Experience[]> {

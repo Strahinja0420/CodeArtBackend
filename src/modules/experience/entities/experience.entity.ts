@@ -37,6 +37,9 @@ export class Experience {
   @ApiPropertyOptional({ example: 'Statues' })
   category?: string | null;
 
+  @ApiPropertyOptional({ example: 'https://storage.com/qr-code.png' })
+  QRcodeUrl?: string | null;
+
   @ApiProperty()
   userId: string;
 

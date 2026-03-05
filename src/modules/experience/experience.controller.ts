@@ -11,6 +11,7 @@ import {
   UploadedFile,
   UploadedFiles,
   ParseFilePipeBuilder,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   FileFieldsInterceptor,
@@ -259,17 +260,7 @@ export class ExperienceController {
     };
   }
 
-  @ApiOperation({ summary: 'Upload a 3D model for an experience' })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: { type: 'string', format: 'binary' },
-      },
-    },
-  })
-  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: '3D Model uploaded successfully' })
   @Post(':id/model')
   async uploadModel(
     @CurrentUser() user: User,
@@ -304,6 +295,28 @@ export class ExperienceController {
     return {
       message: '3D Model uploaded successfully',
       url: modelUrl,
+    };
+  }
+
+  @ApiOperation({ summary: 'Regenerate QR code for an experience' })
+  @Post(':id/qr-code/regenerate')
+  async regenerateQRCode(
+    @CurrentUser() user: User,
+    @Param('id') experienceId: string,
+  ) {
+    const experience = await this.experienceService.findOne(experienceId);
+    if (experience.userId !== user.id) {
+      throw new ForbiddenException('You cannot change this experience.');
+    }
+
+    const qrCodeUrl = await this.experienceService.generateQRCode(
+      experienceId,
+      user.id,
+    );
+
+    return {
+      message: 'QR Code regenerated successfully',
+      url: qrCodeUrl,
     };
   }
 }
