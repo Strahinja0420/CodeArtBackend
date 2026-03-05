@@ -1,4 +1,4 @@
-import { Experience } from 'src/experience/entities/experience.entity';
+import { Experience } from '../../experience/entities/experience.entity';
 import { User } from './user.entity';
 import { ApiProperty } from '@nestjs/swagger';
 

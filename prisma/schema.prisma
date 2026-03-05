@@ -55,6 +55,7 @@ model Experience {
   scanCount       Int     @default(0)
   audioLocation   String?
   storageLocation String?
+  QRcodeUrl       String?
 
   // Metadata
   material     String?

@@ -6,7 +6,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { UserModule } from './modules/user/user.module';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { ExperienceModule } from './experience/experience.module';
+import { ExperienceModule } from './modules/experience/experience.module';
+import { QrServiceModule } from './qr-service/qr-service.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ExperienceModule } from './experience/experience.module';
       ],
     }),
     ExperienceModule,
+    QrServiceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
