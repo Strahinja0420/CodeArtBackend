@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 import { PrismaService } from 'prisma/prisma.service';
 
 import { SupabaseService } from 'src/supabase/supabase.service';
@@ -87,5 +88,18 @@ export class UserService {
     return await this.prismaService.user.delete({
       where: { id },
     });
+  }
+
+  async updatePassword(id: string, dto: UpdatePasswordDto): Promise<void> {
+    const { error } =
+      await this.supabaseService.admin.auth.admin.updateUserById(id, {
+        password: dto.newPassword,
+      });
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Failed to update password in Supabase: ${error.message}`,
+      );
+    }
   }
 }

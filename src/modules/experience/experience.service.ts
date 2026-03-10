@@ -83,10 +83,13 @@ export class ExperienceService {
       include: { qrStyle: true },
     });
 
-    const qrCodeUrl = await this.qrServiceService.generateQRCode(
-      experienceId,
-      (userWithStyle?.qrStyle?.config as any) || {},
-    );
+    const config = (userWithStyle?.qrStyle?.config as any) || {};
+    const logoURL = userWithStyle?.qrStyle?.logoURL;
+
+    const qrCodeUrl = await this.qrServiceService.generateQRCode(experienceId, {
+      ...config,
+      logoURL,
+    });
 
     return qrCodeUrl;
   }
@@ -102,14 +105,39 @@ export class ExperienceService {
         },
       });
 
-    return userExperiences;
+    return userExperiences.map((exp: any) => {
+      const avg =
+        exp.feedbacks.length > 0
+          ? exp.feedbacks.reduce((sum, f) => sum + f.rating, 0) /
+            exp.feedbacks.length
+          : 0;
+      return {
+        ...exp,
+        averageRating: parseFloat(avg.toFixed(1)),
+        feedbackCount: exp.feedbacks.length,
+      };
+    });
   }
 
-  async findAll(): Promise<Experience[]> {
-    const experiences: Experience[] =
-      await this.prismaService.experience.findMany();
+  async findAll(): Promise<any[]> {
+    const experiences = await this.prismaService.experience.findMany({
+      include: {
+        feedbacks: true,
+      },
+    });
 
-    return experiences;
+    return experiences.map((exp) => {
+      const avg =
+        exp.feedbacks.length > 0
+          ? exp.feedbacks.reduce((sum, f) => sum + f.rating, 0) /
+            exp.feedbacks.length
+          : 0;
+      return {
+        ...exp,
+        averageRating: parseFloat(avg.toFixed(1)),
+        feedbackCount: exp.feedbacks.length,
+      };
+    });
   }
 
   async findOne(id: string): Promise<Experience> {
@@ -147,6 +175,40 @@ export class ExperienceService {
 
     return await this.prismaService.experience.delete({
       where: { id },
+    });
+  }
+
+  async recordScan(
+    experienceId: string,
+    metadata: { language: any; deviceType: any },
+  ): Promise<void> {
+    await this.prismaService.experience.update({
+      where: { id: experienceId },
+      data: {
+        scanCount: { increment: 1 },
+      },
+    });
+
+    await this.prismaService.visit.create({
+      data: {
+        experienceId,
+        language: metadata.language || 'EN',
+        deviceType: metadata.deviceType || 'MOBILE',
+        timestamp: new Date(),
+      },
+    });
+  }
+
+  async addFeedback(
+    experienceId: string,
+    data: { rating: number; comment?: string },
+  ) {
+    return await this.prismaService.feedback.create({
+      data: {
+        experienceId,
+        rating: data.rating,
+        comment: data.comment,
+      },
     });
   }
 }

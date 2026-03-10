@@ -53,29 +53,48 @@ export class AuthService {
 
   async signIn(signInDto: SignInDto) {
     const { email, password } = signInDto;
+    console.log(`[AuthService] Attempting to sign in user: ${email}`);
+
     const { data, error } =
       await this.supabaseService.client.auth.signInWithPassword({
         email,
         password,
       });
+
     if (error || !data.user) {
+      console.error(`[AuthService] Supabase sign-in error:`, error?.message);
       throw new UnauthorizedException(error?.message || 'User not found');
     }
+
+    console.log(
+      `[AuthService] Supabase sign-in success for user: ${data.user.id}`,
+    );
+
     const userEmail = data.user.email || email;
     const userName = data.user.user_metadata?.name || userEmail.split('@')[0];
 
-    const prismaUser = await this.prisma.user.upsert({
-      where: { id: data.user.id },
-      update: { email: userEmail },
-      create: {
-        id: data.user.id,
-        email: userEmail,
-        name: userName,
-      },
-    });
-    return {
-      user: prismaUser,
-      access_token: data.session?.access_token,
-    };
+    try {
+      const prismaUser = await this.prisma.user.upsert({
+        where: { id: data.user.id },
+        update: { email: userEmail },
+        create: {
+          id: data.user.id,
+          email: userEmail,
+          name: userName,
+        },
+      });
+
+      console.log(
+        `[AuthService] Prisma upsert success for user: ${prismaUser.id}`,
+      );
+
+      return {
+        user: prismaUser,
+        access_token: data.session?.access_token,
+      };
+    } catch (e) {
+      console.error(`[AuthService] Prisma upsert failed:`, e);
+      throw e;
+    }
   }
 }

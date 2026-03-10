@@ -33,13 +33,12 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
-import { JwtAuthGuard } from 'src/guards/auth.guard';
 import { Public } from 'src/decorators/public.decorator';
 import { SupabaseService } from 'src/supabase/supabase.service';
 
 @ApiTags('experience')
 @ApiBearerAuth()
-@UseGuards(ThrottlerGuard, JwtAuthGuard)
+@UseGuards(ThrottlerGuard)
 @Controller('experience')
 export class ExperienceController {
   constructor(
@@ -318,5 +317,30 @@ export class ExperienceController {
       message: 'QR Code regenerated successfully',
       url: qrCodeUrl,
     };
+  }
+
+  @ApiOperation({ summary: 'Record a scan/view for an experience' })
+  @Public()
+  @Post(':id/scan')
+  async recordScan(
+    @Param('id') id: string,
+    @Body() metadata: { language?: string; deviceType?: string },
+  ) {
+    await this.experienceService.recordScan(id, {
+      language: metadata.language,
+      deviceType: metadata.deviceType,
+    });
+
+    return { message: 'Scan recorded' };
+  }
+
+  @ApiOperation({ summary: 'Add feedback/rating for an experience' })
+  @Public()
+  @Post(':id/feedback')
+  async addFeedback(
+    @Param('id') id: string,
+    @Body() data: { rating: number; comment?: string },
+  ) {
+    return await this.experienceService.addFeedback(id, data);
   }
 }

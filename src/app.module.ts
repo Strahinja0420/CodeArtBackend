@@ -8,6 +8,8 @@ import { UserModule } from './modules/user/user.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ExperienceModule } from './modules/experience/experience.module';
 import { QrServiceModule } from './qr-service/qr-service.module';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './guards/auth.guard';
 
 @Module({
   imports: [
@@ -27,6 +29,6 @@ import { QrServiceModule } from './qr-service/qr-service.module';
     QrServiceModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: JwtAuthGuard }],
 })
 export class AppModule {}

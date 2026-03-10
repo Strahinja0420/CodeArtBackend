@@ -9,6 +9,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableShutdownHooks();
+  app.enableCors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+  });
 
   //PRISMA FILTER
   const { httpAdapter } = app.get(HttpAdapterHost);
@@ -16,8 +20,10 @@ async function bootstrap() {
 
   //SWAGGER
   const config = new DocumentBuilder()
-    .setTitle('CodeArt')
-    .setDescription('zjum')
+    .setTitle('ArtNode API')
+    .setDescription(
+      'The core API for ArtNode artifacts and experience tracking.',
+    )
     .setVersion('1.0')
     .addBearerAuth()
     .build();
