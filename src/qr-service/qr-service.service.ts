@@ -13,14 +13,9 @@ export class QrServiceService {
   ) {}
 
   async generateQRCode(experienceId: string, options: any) {
-<<<<<<< HEAD
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const targetUrl = `${baseUrl}/experience/${experienceId}`;
-=======
     const baseUrl =
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
     const targetUrl = `${baseUrl}/welcome/${experienceId}`;
->>>>>>> feature/all-ai-made
 
     console.log(`Generating QR code for target URL: ${targetUrl}`);
 
