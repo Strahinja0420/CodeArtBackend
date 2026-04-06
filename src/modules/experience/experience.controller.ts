@@ -20,6 +20,7 @@ import {
 import { ExperienceService } from './experience.service';
 import { CreateExperienceDto } from './dto/create-experience.dto';
 import { UpdateExperienceDto } from './dto/update-experience.dto';
+import { ChatExperienceDto } from './dto/chat-experience.dto';
 import { CurrentUser } from 'src/decorators/user.decorator';
 import { User } from 'src/modules/user/entities/user.entity';
 import { Experience } from './entities/experience.entity';
@@ -342,5 +343,19 @@ export class ExperienceController {
     @Body() data: { rating: number; comment?: string },
   ) {
     return await this.experienceService.addFeedback(id, data);
+  }
+
+  @ApiOperation({ summary: 'Chat with the AI Assistant about an experience' })
+  @Public()
+  @Post(':id/chat')
+  async chatWithAssistant(
+    @Param('id') id: string,
+    @Body() data: ChatExperienceDto,
+  ) {
+    const response = await this.experienceService.chatWithAssistant(id, data.messages);
+    return {
+      message: 'Chat processed successfully',
+      data: response,
+    };
   }
 }

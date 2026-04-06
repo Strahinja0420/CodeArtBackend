@@ -91,6 +91,12 @@ export class ExperienceService {
       logoURL,
     });
 
+    // Update the experience record with the new QR code URL
+    await this.prismaService.experience.update({
+      where: { id: experienceId },
+      data: { QRcodeUrl: qrCodeUrl },
+    });
+
     return qrCodeUrl;
   }
 
@@ -210,5 +216,66 @@ export class ExperienceService {
         comment: data.comment,
       },
     });
+  }
+
+  async chatWithAssistant(experienceId: string, messages: any[]): Promise<any> {
+    const experience = await this.findOne(experienceId);
+    
+    // We only proceed if GEMINI_API_KEY is available
+    if (!process.env.GEMINI_API_KEY) {
+      return {
+        role: 'assistant',
+        content: "I'm sorry, I cannot assist right now as the AI service is not configured on the server. Please check that GEMINI_API_KEY is present in the server's .env file.",
+      };
+    }
+
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+    const systemPrompt = `You are an AI museum tour guide assisting a visitor who is viewing an artifact.
+Here are the details of the artifact:
+Title: ${experience.title || 'Unknown'}
+Author/Artist: ${experience.author || 'Unknown'}
+Period/Year: ${experience.period || 'Unknown'} (${experience.yearCreated || 'Unknown'})
+Material: ${experience.material || 'Unknown'}
+Category: ${experience.category || 'Unknown'}
+Description: ${experience.description || 'No description available.'}
+
+Answer any questions the visitor has about it. Be engaging, educational, and concise. Do not make up facts outside of standard historical knowledge related to this artifact.`;
+
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview", systemInstruction: systemPrompt });
+
+      // Convert messages to Gemini format
+      const rawHistory = messages.slice(0, -1).map(msg => ({
+        role: msg.role === 'assistant' || msg.role === 'model' ? 'model' : 'user',
+        parts: [{ text: msg.content }],
+      }));
+      
+      // Gemini strict rule: history must start with 'user'
+      const history: any[] = [];
+      for (const msg of rawHistory) {
+        if (history.length === 0 && msg.role === 'model') {
+          continue; // Skip any model messages at the absolute beginning
+        }
+        history.push(msg);
+      }
+
+      const lastMessage = messages[messages.length - 1]?.content || "";
+
+      const chat = model.startChat({
+        history: history,
+      });
+
+      const response = await chat.sendMessage(lastMessage);
+
+      return {
+        role: 'assistant',
+        content: response.response.text(),
+      };
+    } catch (error) {
+      console.error("Gemini Error:", error);
+      throw new ForbiddenException("Failed to connect to the AI Assistant.");
+    }
   }
 }

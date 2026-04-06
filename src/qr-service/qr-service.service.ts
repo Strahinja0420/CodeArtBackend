@@ -100,7 +100,8 @@ export class QrServiceService {
         `${experienceId}/qr-code.png`,
       );
 
-      return qrCodeUrl;
+      // Append cache-busting param so browsers fetch the new image
+      return `${qrCodeUrl}?t=${Date.now()}`;
     } catch (err) {
       console.error('QR Generation Error:', err);
       throw new InternalServerErrorException('Failed to create QR code.');
